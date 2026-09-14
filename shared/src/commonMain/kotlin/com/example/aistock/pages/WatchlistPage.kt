@@ -9,6 +9,7 @@ import com.example.aistock.data.DataSource
 import com.example.aistock.data.StockApis
 import com.example.aistock.data.formatHms
 import com.example.aistock.theme.AppColors
+import com.example.aistock.theme.AppFont
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.ComposeContainer
 import com.tencent.kuikly.compose.foundation.background
@@ -120,6 +121,7 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                     color = AppColors.TextMain,
                     fontSize = AppText.Price,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = AppFont.Serif,
                     modifier = Modifier.weight(1f),
                 )
                 SourceBadge(vm.dataSource, vm.fetchedAt)
@@ -132,6 +134,21 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
+            // 报头 double rule：上粗下细两条横线，出版物的签名装置
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
+                    .height(2.dp)
+                    .background(AppColors.TextMain),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 1.dp)
+                    .height(1.dp)
+                    .background(AppColors.Line),
+            )
         }
 
         // ---- 状态横幅：如实告诉用户当前数据的可靠性，绝不把示例数据伪装成实时行情 ----

@@ -1,35 +1,43 @@
 package com.example.aistock.components
 
 import androidx.compose.runtime.Composable
+import com.example.aistock.components.core.HairLine
 import com.example.aistock.data.StockItem
 import com.example.aistock.data.formatDouble2
 import com.example.aistock.data.formatFen
 import com.example.aistock.data.formatPctSigned
 import com.example.aistock.theme.AppColors
+import com.example.aistock.theme.AppFont
+import com.example.aistock.theme.AppShape
+import com.example.aistock.theme.AppSpace
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.border
+import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
+import com.tencent.kuikly.compose.foundation.layout.Spacer
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
+import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
-import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 
 /**
- * 单只股票卡片（可复用 UI 组件）。
+ * 单只股票的「行情栏」—— 报刊风重写。
  *
- * @Composable 函数就是「组件」：输入参数 → 输出 UI。它没有返回值，
- * 而是在组合树里"描述"该画什么；参数一变，Compose 自动重画发生变化的部分。
+ * 与上一版（圆角卡片）的刻意区别：**去卡片化**。报纸行情版不是一堆
+ * 圆角小盒子，而是一栏栏靠**细分隔线**区隔的文字——所以这里没有
+ * background/border，行与行之间用一条 1dp 淡墨线（底部 [HairLine]）。
+ * 文气来自排版密度与字族对比，不来自容器装饰。
  *
- * 这个组件只负责「怎么显示一只股票」，不关心数据从哪来、点击后去哪——
- * 这样它能被自选页、搜索结果页、详情页反复使用。
+ * 层级（四个维度叠加，不靠字号微调）：
+ *   名称 = 衬线 + SemiBold + 浓墨 / 现价 = 衬线 + Bold + 涨跌色 /
+ *   代码行业 = 小号 + 淡墨 / 指标 = 等宽小字
  */
 @Composable
 fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
@@ -38,13 +46,10 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            // 点击热区放在 padding 之前：这样整行（含左右留白）都可点，
-            // 而不是只有文字卡片那一条窄带可点 —— 列表里的触摸目标越大越不容易点空。
+            // 点击热区放在 padding 之前：整行（含左右留白）都可点，
+            // 列表里的触摸目标越大越不容易点空。
             .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-            .background(AppColors.CardBg, RoundedCornerShape(12.dp))
-            .border(1.dp, AppColors.Border, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = AppSpace.ScreenEdge, vertical = 10.dp),
     ) {
         // 第一行：名称 + 代码 | 现价 + 涨跌幅
         Row(
@@ -57,11 +62,13 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
                     color = AppColors.TextMain,
                     fontSize = AppText.Title,
                     fontWeight = FontWeight.SemiBold,
+                    fontFamily = AppFont.Serif,
                 )
                 Text(
                     text = "${item.code} · ${item.industry}",
-                    color = AppColors.TextSub,
+                    color = AppColors.TextWeak,
                     fontSize = AppText.Tiny,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -69,17 +76,19 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
                     text = formatFen(item.price),
                     color = changeColor,
                     fontSize = AppText.Price,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = AppFont.Serif,
                 )
                 Text(
                     text = "${formatFen(item.change)}  ${formatPctSigned(item.changePct)}",
                     color = changeColor,
                     fontSize = AppText.Caption,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
         }
 
-        // 第二行：关键指标
+        // 第二行：关键指标（等宽小字，行情栏的传统排法）
         Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
             StatCell("今开", formatFen(item.open), Modifier.weight(1f))
             StatCell("最高", formatFen(item.high), Modifier.weight(1f))
@@ -102,34 +111,43 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
-                    .background(AppColors.HeaderBg, RoundedCornerShape(8.dp))
+                    .background(AppColors.AccentSoft, AppShape.Card)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "AI",
-                    color = Color.White,
+                    color = AppColors.Panel,
                     fontSize = AppText.Tiny,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
-                        .background(AppColors.AiAccent, RoundedCornerShape(4.dp))
+                        .background(AppColors.Accent, AppShape.Badge)
                         .padding(horizontal = 5.dp, vertical = 1.dp),
                 )
                 Text(
                     text = "  ${item.aiProfile.action} · ${item.aiProfile.signal} · ${item.aiProfile.score}分",
-                    color = AppColors.TextMain,
+                    color = AppColors.Accent,
                     fontSize = AppText.Caption,
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        // 行间分隔线：报纸行情栏的栏界
+        HairLine()
     }
 }
 
 @Composable
 private fun StatCell(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text(text = label, color = AppColors.TextWeak, fontSize = AppText.Tiny)
-        Text(text = value, color = AppColors.TextMain, fontSize = AppText.Caption)
+        Text(text = label, color = AppColors.TextWeak, fontSize = AppText.Micro)
+        Text(
+            text = value,
+            color = AppColors.TextSub,
+            fontSize = AppText.Small,
+            fontFamily = AppFont.Mono,
+        )
     }
 }
 
@@ -137,11 +155,11 @@ private fun StatCell(label: String, value: String, modifier: Modifier = Modifier
 private fun TagChip(text: String) {
     Text(
         text = text,
-        color = AppColors.Primary,
+        color = AppColors.TextSub,
         fontSize = AppText.Tiny,
         modifier = Modifier
             .padding(end = 6.dp)
-            .background(AppColors.HeaderBg, RoundedCornerShape(4.dp))
+            .border(1.dp, AppColors.Line, AppShape.Badge)
             .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }

@@ -9,24 +9,22 @@ import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.ColumnScope
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.ui.Modifier
-import com.tencent.kuikly.compose.ui.draw.shadow
 import com.tencent.kuikly.compose.ui.graphics.Shape
 import com.tencent.kuikly.compose.ui.unit.Dp
 import com.tencent.kuikly.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 
 /**
- * 仪表面板：全 App 唯一的容器原语。
+ * 纸面板：全 App 唯一的容器原语。
  *
- * 为什么不直接用「卡片 + 阴影」那套浅色设计的写法：**深色界面上阴影几乎看不见**，
- * 层次只能靠「底色差 + 1px 描边」表达。所以这里的浮起感是：
- *   页面底(#05070D) → 面板底(#0C1220) → 1px 描边(#1E2A40)
- * 选中/强调时把描边换成青色（[AppColors.Accent]），而不是换背景色——
- * 换背景会把里面红绿数字的对比度一起动掉。
+ * 报刊的层次表达（跟深色版相反，浅色纸上阴影反而可用，但**刻意不用**）：
+ * 阴影是「悬浮物」的语言，纸是**贴在版面上的**——所以层次靠
+ *   页面纸(#F5F0E6) → 面板纸(#FCF9F1) → 1px 淡墨描边(#D8CDB4)
+ * 这也是文艺风和「互联网卡片风」的分界线：后者靠圆角+阴影，前者靠描边+留白。
  *
- * @param highlighted 强调态：青色描边（用于 AI 命中的条目、选中项）
- * @param glow 外发光。只在「需要抓注意力」的元素上开（如 AI 弹层），开多了就没重点了
- * @param onClick 传了才可点。点击态用统一的 [AppMotion] 微交互时长手感
+ * @param highlighted 强调态：黛青描边（AI 命中的条目、选中项）
+ * @param glow 兼容参数：纸墨风不需要发光，保留签名以免改动调用方，忽略之
+ * @param onClick 传了才可点
  */
 @Composable
 fun Panel(
@@ -39,12 +37,10 @@ fun Panel(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    // 强调态描边用半透明青：纯青描边在深底上会「越界」，压一点才像发光而不是画框
-    val stroke = if (highlighted) AppColors.Accent.copy(alpha = 0.6f) else AppColors.Line
+    val stroke = if (highlighted) AppColors.Accent else AppColors.Line
 
     Column(
         modifier = modifier
-            .then(if (glow) Modifier.shadow(elevation = 10.dp, shape = shape, clip = false) else Modifier)
             .background(color = AppColors.Panel, shape = shape)
             .border(width = 1.dp, color = stroke, shape = shape)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)

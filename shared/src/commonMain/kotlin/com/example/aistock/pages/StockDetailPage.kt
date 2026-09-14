@@ -24,6 +24,7 @@ import com.example.aistock.data.formatDouble2
 import com.example.aistock.data.formatFen
 import com.example.aistock.data.formatPctSigned
 import com.example.aistock.theme.AppColors
+import com.example.aistock.theme.AppFont
 import com.example.aistock.theme.AppSpace
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.ComposeContainer
@@ -163,7 +164,7 @@ private fun DetailTopBar(
             }
             Spacer(modifier = Modifier.width(AppSpace.Sm))
             Column {
-                Text(text = title, color = AppColors.TextMain, fontSize = AppText.Title, fontWeight = FontWeight.SemiBold)
+                Text(text = title, color = AppColors.TextMain, fontSize = AppText.Title, fontWeight = FontWeight.SemiBold, fontFamily = AppFont.Serif)
                 if (!subtitle.isNullOrBlank()) {
                     Text(text = subtitle, color = AppColors.TextWeak, fontSize = AppText.Micro)
                 }
@@ -191,6 +192,7 @@ private fun PriceBlock(item: StockItem) {
                 color = color,
                 fontSize = AppText.HeroPrice,
                 fontWeight = FontWeight.Bold,
+                fontFamily = AppFont.Serif,
             )
             Spacer(modifier = Modifier.width(AppSpace.Sm))
             Text(

@@ -4,77 +4,76 @@ import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.unit.sp
 
 /**
- * 颜色 token —— 视觉方向：**深空交易终端 / HUD 仪表盘**。
+ * 颜色 token —— 视觉方向：**纸墨行情 / 中文财经报刊**。
  *
- * 定调说明（为什么是这套色）：
- *  - 股票行情本质是「高密度数据终端」，不是社交产品。深底能让红绿数字最亮、最跳，
- *    浅底反而会跟涨跌色抢注意力；
- *  - 配色按 60/30/10 分配：深空底色占 60%，冷灰蓝文字占 30%，
- *    **单一强调色（青 #2CE5E0）占 10%** —— 只用于数据高亮、AI 相关描边和动效。
- *    单页只有一个强调色是刻意的：多色强调会立刻变成「AI 味」的花哨；
- *  - 涨跌色（红/绿）**不计入** 10%，它们是**语义色**而非装饰色 ——
- *    用户扫一眼颜色就知道涨跌，这里必须遵守中国市场惯例：**红涨绿跌**。
+ * 定调说明（为什么从「深空终端」换成「纸墨报刊」）：
+ *  - 文艺气质的来源不是颜色本身，而是**材质感**：宣纸暖白 + 浓墨文字，
+ *    像一张摊开的财经报纸。深底霓虹是「科技感」，纸墨才是「文气」；
+ *  - 配色仍按 60/30/10：纸色占 60%，墨色文字占 30%，
+ *    **单一强调色（黛青 #2F5D62）占 10%** —— 用于 AI、选中态、数据高亮。
+ *    黛青是传统国画用色，比科技青沉稳，和纸色是同一个「文气」体系；
+ *  - 涨跌色是**语义色**不计入 10%：涨用**朱砂**（印章红，偏沉的红，
+ *    比荧光红有文气），跌用**黛绿**。红涨绿跌的中国市场惯例不动。
  *
- * 但它在深底上要提亮一档：浅底用的正红正绿放到近黑底上会发闷，
- * 所以换成霓虹红/荧光绿，对比度才够（正文对比度目标 ≥ 4.5:1）。
+ * 对比度：浓墨 #2B2519 在宣纸上对比度 > 12:1；朱砂/黛绿用于大号数字，均 ≥ 4.5:1。
  */
 object AppColors {
 
     // ---------- 底层（60% 主色域）----------
-    /** 页面底：近黑的深空蓝，比纯黑柔和，给氛围图层留出层次。 */
-    val PageBg = Color(0xFF05070D)
+    /** 页面底：宣纸暖白。比纯白黄一点，才有「纸」的感觉。 */
+    val PageBg = Color(0xFFF5F0E6)
 
-    /** 面板（卡片）底：比页面底亮一档，形成「浮起」感。 */
-    val Panel = Color(0xFF0C1220)
+    /** 面板（卡片）底：比页面纸更亮一档，像贴上去的一页新纸。 */
+    val Panel = Color(0xFFFCF9F1)
 
-    /** 面板高亮层：用于选中/展开，再亮一档。 */
-    val PanelHi = Color(0xFF131C2E)
+    /** 面板高亮层：选中/展开态。 */
+    val PanelHi = Color(0xFFFFFDF6)
 
-    /** 顶部 header 底：略偏蓝，让它跟内容区有微妙区分。 */
-    val HeaderBg = Color(0xFF0A0F1A)
+    /** 顶部报头底：略深的旧纸色，跟内容区做微妙区分。 */
+    val HeaderBg = Color(0xFFEEE7D7)
 
-    /** 描边：面板的 1px 边框。深色设计里「边框」比「阴影」更能表达层次。 */
-    val Line = Color(0xFF1E2A40)
+    /** 描边：淡墨线。报刊的框架感全靠它，不用阴影。 */
+    val Line = Color(0xFFD8CDB4)
 
-    /** 弱描边：分隔线、次要轮廓。 */
-    val LineSoft = Color(0xFF16202F)
+    /** 弱描边：行间分隔线、次要轮廓。 */
+    val LineSoft = Color(0xFFE4DBC7)
 
     // 兼容旧命名（早期代码用 CardBg/Border，语义相同）
     val CardBg = Panel
     val Border = Line
 
     // ---------- 文字（30% 辅助域）----------
-    val TextMain = Color(0xFFE8F0FB)
-    val TextSub = Color(0xFF8797B0)
-    val TextWeak = Color(0xFF4E5C74)
+    val TextMain = Color(0xFF2B2519)
+    val TextSub = Color(0xFF6E6350)
+    val TextWeak = Color(0xFFA2957D)
 
     // ---------- 强调（10%，唯一）----------
-    /** 主强调色：青。数据高亮、AI 描边、动效都只用它。 */
-    val Accent = Color(0xFF2CE5E0)
+    /** 主强调色：黛青（国画用色）。AI、选中、数据高亮只用它。 */
+    val Accent = Color(0xFF2F5D62)
 
-    /** 强调色的低亮版本，用于渐变收尾、发光边缘。 */
-    val AccentDim = Color(0xFF0E6C6C)
+    /** 强调色深版，用于渐变收尾。 */
+    val AccentDim = Color(0xFF1E4045)
 
-    /** 强调色的极淡填充（选中态背景），透明度低到不抢文字。 */
-    val AccentSoft = Color(0x1A2CE5E0)
+    /** 强调色的极淡填充（选中态背景）。 */
+    val AccentSoft = Color(0x1A2F5D62)
 
     /** 兼容旧命名：Primary / AiAccent 统一收敛到唯一强调色。 */
     val Primary = Accent
     val AiAccent = Accent
 
     // ---------- 语义色（涨跌，不计入 10%）----------
-    /** ⚠️ 中国市场惯例：红涨绿跌（与欧美市场相反）。 */
-    val Up = Color(0xFFFF4B6E)
-    val Down = Color(0xFF12E29A)
+    /** ⚠️ 中国市场惯例：红涨绿跌。涨=朱砂（印章红），跌=黛绿。 */
+    val Up = Color(0xFFC14B3A)
+    val Down = Color(0xFF2F7D5D)
 
-    val Warning = Color(0xFFFFB020)
+    val Warning = Color(0xFFB07D2B)
 
     // ---------- 氛围层 ----------
-    /** 背景网格线（白 4% 透明）：制造「仪表盘」的空间感，不抢内容。 */
-    val GridLine = Color(0x0AFFFFFF)
+    /** 背景纹样线（墨 3% 透明）：纸面的极淡肌理，不抢内容。 */
+    val GridLine = Color(0x082B2519)
 
-    /** 扫描线（白 2%）：CRT 质感，只在 header 区域用一点。 */
-    val Scan = Color(0x05FFFFFF)
+    /** 氛围层（墨 2%），只在报头区域用一点。 */
+    val Scan = Color(0x052B2519)
 
     /** 涨跌 → 颜色。全项目共用这一份判断，避免某处红绿写反。 */
     fun ofChange(changePct: Double): Color = when {
@@ -85,29 +84,30 @@ object AppColors {
 }
 
 /**
- * 字号 token。Kuikly 的 fontSize 是 TextUnit（sp 单位），
- * 用裸 Float 会直接编译不过。
+ * 字号 token。Kuikly 的 fontSize 是 TextUnit（sp 单位），裸 Float 编译不过。
  *
- * 数值取向：数值类文字整体比正文大 2–4sp，因为在行情界面里「数字才是主角」。
+ * 排印方法（来自 impeccable/typography 的模块化比例思想）：
+ * **字号少而对比大**。全 App 只有 7 档，相邻档位差 ≥ 2sp，
+ * 层级靠「字号 + 字重 + 字族 + 颜色」四个维度叠加，不靠微调字号。
  */
 object AppText {
-    /** 详情页主价格，一屏最大。 */
-    val HeroPrice = 34.sp
+    /** 详情页主价格，一屏最大。衬线加粗才有报刊标题的味道。 */
+    val HeroPrice = 36.sp
 
     /** 列表里的现价。 */
-    val Price = 19.sp
+    val Price = 20.sp
 
     /** 价格变动（小一号，跟在现价后面）。 */
     val Delta = 13.sp
 
-    val Title = 16.sp
+    val Title = 17.sp
     val Body = 14.sp
     val Small = 13.sp
 
-    /** 小节标题、标签：小号 + 靠颜色而非字号分层。 */
+    /** 小节标题、标签：小号 + 靠颜色与字重分层。 */
     val Caption = 12.sp
     val Tiny = 11.sp
 
-    /** 仪表面板上的刻度标注（最小一级，只用于装饰性信息）。 */
+    /** 刊头注脚（最小一级，只用于装饰性信息）。 */
     val Micro = 10.sp
 }

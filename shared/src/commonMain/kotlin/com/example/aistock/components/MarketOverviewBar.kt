@@ -5,8 +5,11 @@ import com.example.aistock.data.MarketOverview
 import com.example.aistock.data.formatCap
 import com.example.aistock.data.formatPctSigned
 import com.example.aistock.theme.AppColors
+import com.example.aistock.theme.AppFont
+import com.example.aistock.theme.AppShape
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.border
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
@@ -38,7 +41,8 @@ fun MarketOverviewBar(overview: MarketOverview) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 6.dp)
-            .background(AppColors.CardBg, RoundedCornerShape(12.dp))
+            .background(AppColors.Panel, AppShape.Card)
+            .border(1.dp, AppColors.Line, AppShape.Card)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -47,6 +51,7 @@ fun MarketOverviewBar(overview: MarketOverview) {
                 color = AppColors.TextMain,
                 fontSize = AppText.Body,
                 fontWeight = FontWeight.SemiBold,
+                fontFamily = AppFont.Serif,
                 modifier = Modifier.weight(1f),
             )
             Text(
