@@ -2,10 +2,16 @@ package com.example.aistock.pages
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import com.example.aistock.components.MarketOverviewBar
 import com.example.aistock.components.StockCard
 import com.example.aistock.data.DataSource
+import com.example.aistock.components.AiSheet
+import com.example.aistock.data.AiAnalysis
+import com.example.aistock.data.StockItem
 import com.example.aistock.data.StockApis
 import com.example.aistock.data.formatHms
 import com.example.aistock.theme.AppColors
@@ -61,6 +67,12 @@ class WatchlistPage : ComposeContainer() {
                     val router = acquireModule(RouterModule.MODULE_NAME) as RouterModule
                     openDetail(router, code)
                 },
+                onOpenReport = { code ->
+                    val router = acquireModule(RouterModule.MODULE_NAME) as RouterModule
+                    val pj = JSONObject()
+                    pj.put(AiReportPage.PAGE_PARAM_CODE, code)
+                    router.openPage(AiReportPage.PAGE_NAME, pj)
+                },
             )
         }
     }
@@ -91,10 +103,22 @@ private fun openDetail(router: RouterModule, code: String) {
  * 好处是状态变化只有一个来源，出问题好定位。
  */
 @Composable
-fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit = {}) {
+fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit = {}, onOpenReport: (String) -> Unit = {}) {
     // remember：跨重组缓存这个对象，别每次重画都新建一个数据源
     val stockApi = remember { StockApis.stocks(network) }
     val vm: WatchlistViewModel = viewModel { WatchlistViewModel(stockApi) }
+
+    // AI 抽屉状态：长按卡片拉起；分析数据在抽屉打开时才去取（真实取数时长 = 思考动画时长）
+    var sheetItem by remember { mutableStateOf<StockItem?>(null) }
+    var sheetAnalysis by remember { mutableStateOf<AiAnalysis?>(null) }
+    var sheetAnalyzing by remember { mutableStateOf(false) }
+    LaunchedEffect(sheetItem?.id) {
+        val target = sheetItem ?: return@LaunchedEffect
+        sheetAnalyzing = true
+        sheetAnalysis = null
+        sheetAnalysis = stockApi.fetchAiAnalysis(target.code)
+        sheetAnalyzing = false
+    }
 
     // LaunchedEffect：进入页面时执行一次的副作用（这里是首次拉数据）
     LaunchedEffect(Unit) {
@@ -105,7 +129,8 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
     // 所以顶部必须自己让出状态栏，否则标题会和系统的时间/信号图标叠在一起。
     val statusBarHeight = LocalConfiguration.current.statusBarHeight
 
-    Column(modifier = Modifier.fillMaxSize().background(AppColors.PageBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppColors.PageBg)) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
         // ---- 顶部 header：标题 + 数据源角标 + AI 摘要文案 ----
         Column(
@@ -183,7 +208,11 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                     item { MarketOverviewBar(overview) }
                 }
                 items(items = vm.stocks, key = { it.id }) { stock ->
-                    StockCard(stock, onClick = { onOpenDetail(stock.code) })
+                    StockCard(
+                        stock,
+                        onClick = { onOpenDetail(stock.code) },
+                        onLongClick = { sheetItem = stock },
+                    )
                 }
                 item {
                     Box(
@@ -196,6 +225,31 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                             fontSize = AppText.Tiny,
                         )
                     }
+                }
+            }
+        }
+        }
+
+        // ---- AI 抽屉：遮罩 + 底部纸面板 ----
+        if (sheetItem != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppColors.TextMain.copy(alpha = 0.35f))
+                    .clickable { sheetItem = null },
+            )
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                sheetItem?.let { item ->
+                    AiSheet(
+                        item = item,
+                        analysis = sheetAnalysis,
+                        analyzing = sheetAnalyzing,
+                        onDismiss = { sheetItem = null },
+                        onOpenReport = { code ->
+                            sheetItem = null
+                            onOpenReport(code)
+                        },
+                    )
                 }
             }
         }

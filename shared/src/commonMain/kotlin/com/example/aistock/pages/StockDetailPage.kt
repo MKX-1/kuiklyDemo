@@ -28,6 +28,7 @@ import com.example.aistock.data.formatFen
 import com.example.aistock.data.formatPctSigned
 import com.example.aistock.theme.AppColors
 import com.example.aistock.theme.AppFont
+import com.example.aistock.theme.AppShape
 import com.example.aistock.theme.AppSpace
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.ComposeContainer
@@ -79,6 +80,12 @@ class StockDetailPage : ComposeContainer() {
                 onBack = {
                     (acquireModule(RouterModule.MODULE_NAME) as RouterModule).closePage()
                 },
+                onOpenReport = { c ->
+                    val router = acquireModule(RouterModule.MODULE_NAME) as RouterModule
+                    val pj = com.tencent.kuikly.core.nvi.serialization.json.JSONObject()
+                    pj.put(AiReportPage.PAGE_PARAM_CODE, c)
+                    router.openPage(AiReportPage.PAGE_NAME, pj)
+                },
             )
         }
     }
@@ -94,6 +101,7 @@ fun StockDetailScreen(
     token: String,
     network: () -> NetworkModule,
     onBack: () -> Unit,
+    onOpenReport: (String) -> Unit = {},
 ) {
     val stockApi = remember { StockApis.stocks(network) }
     val vm: StockDetailViewModel = viewModel { StockDetailViewModel(stockApi, token) }
@@ -131,7 +139,7 @@ fun StockDetailScreen(
                         item { PriceBlock(item) }
                         item { Spacer(modifier = Modifier.height(AppSpace.Sm)); ChartPanel(data = vm.chart, unavailable = vm.chartUnavailable, loading = vm.chartLoading, period = vm.period, onPeriod = vm::switchPeriod) }
                         item { Spacer(modifier = Modifier.height(AppSpace.Sm)); QuoteGrid(item) }
-                        vm.analysis?.let { an -> item { Spacer(modifier = Modifier.height(AppSpace.Sm)); AiPanel(an) } }
+                        vm.analysis?.let { an -> item { Spacer(modifier = Modifier.height(AppSpace.Sm)); AiPanel(an, onReport = { onOpenReport(item.code) }) } }
                         item { Disclaimer() }
                     }
                 }
@@ -330,7 +338,7 @@ private fun GridRow(
 
 /** AI 分析块：评分 + 结论 + 因子分解 + 目标价/止损价。 */
 @Composable
-private fun AiPanel(analysis: AiAnalysis) {
+private fun AiPanel(analysis: AiAnalysis, onReport: () -> Unit = {}) {
     Panel(
         modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpace.ScreenEdge),
         highlighted = true,
@@ -374,6 +382,25 @@ private fun AiPanel(analysis: AiAnalysis) {
         }
         Spacer(modifier = Modifier.height(AppSpace.Sm))
         Text(text = analysis.riskText, color = AppColors.TextWeak, fontSize = AppText.Micro)
+
+        Spacer(modifier = Modifier.height(AppSpace.Md))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.AccentSoft, AppShape.Card)
+                .clickable { onReport() }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "查看完整报告",
+                color = AppColors.Accent,
+                fontSize = AppText.Body,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(text = "→", color = AppColors.Accent, fontSize = AppText.Body)
+        }
     }
 }
 

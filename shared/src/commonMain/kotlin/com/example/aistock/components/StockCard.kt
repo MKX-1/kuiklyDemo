@@ -13,6 +13,8 @@ import com.example.aistock.theme.AppSpace
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.foundation.background
 import com.tencent.kuikly.compose.foundation.clickable
+import com.tencent.kuikly.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import com.tencent.kuikly.compose.ui.input.pointer.pointerInput
 import com.tencent.kuikly.compose.foundation.border
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
@@ -40,7 +42,7 @@ import com.tencent.kuikly.compose.ui.unit.dp
  *   代码行业 = 小号 + 淡墨 / 指标 = 等宽小字
  */
 @Composable
-fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
+fun StockCard(item: StockItem, onClick: () -> Unit = {}, onLongClick: () -> Unit = {}) {
     val changeColor = AppColors.ofChange(item.changePct)
 
     Column(
@@ -49,6 +51,15 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
             // 点击热区放在 padding 之前：整行（含左右留白）都可点，
             // 列表里的触摸目标越大越不容易点空。
             .clickable { onClick() }
+            // 长按整行拉起 AI 分析抽屉（与点击进详情是两个独立手势）
+            .pointerInput(item.id) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onLongClick() },
+                    onDrag = { _, _ -> },
+                    onDragEnd = { },
+                    onDragCancel = { },
+                )
+            }
             .padding(horizontal = AppSpace.ScreenEdge, vertical = 10.dp),
     ) {
         // 第一行：名称 + 代码 | 现价 + 涨跌幅
