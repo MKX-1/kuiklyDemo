@@ -15,7 +15,7 @@ import kotlin.math.roundToLong
  */
 interface AiEngine {
     fun profile(item: StockItemDto): AiProfileDto
-    fun analysis(item: StockItemDto): AiAnalysisDto
+    suspend fun analysis(item: StockItemDto): AiAnalysisDto
     fun summary(stocks: List<StockItemDto>, generatedAt: Long): AiSummaryDto
     fun tags(item: StockItemDto): List<String>
 }
@@ -93,7 +93,7 @@ object RuleEngineAiEngine : AiEngine {
         return AiProfileDto(action, signal, score, scenario)
     }
 
-    override fun analysis(item: StockItemDto): AiAnalysisDto {
+    override suspend fun analysis(item: StockItemDto): AiAnalysisDto {
         val p = item.aiProfile
         val pct = item.changePct
         val (momentum, value, risk) = scoreParts(pct, item.pe)

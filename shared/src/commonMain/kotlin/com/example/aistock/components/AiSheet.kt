@@ -191,7 +191,8 @@ fun AiSheet(
 
                 Spacer(modifier = Modifier.height(AppSpace.Sm))
                 Text(
-                    text = "AI 结论由规则引擎生成，仅供参考，不构成投资建议",
+                    text = if (analysis.source == "llm") "本结论由大模型基于当日行情生成，仅供参考，不构成投资建议"
+                           else "AI 结论由规则引擎生成，仅供参考，不构成投资建议",
                     color = AppColors.TextWeak,
                     fontSize = AppText.Micro,
                 )

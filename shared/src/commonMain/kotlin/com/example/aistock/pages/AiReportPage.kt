@@ -252,7 +252,7 @@ fun AiReportScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = "本报告由规则引擎自动生成，仅供参考，不构成投资建议",
+                                    text = if (analysis.source == "llm") "本报告由大模型基于当日行情生成，仅供参考，不构成投资建议" else "本报告由规则引擎自动生成，仅供参考，不构成投资建议",
                                     color = AppColors.TextWeak,
                                     fontSize = AppText.Micro,
                                 )
@@ -307,6 +307,13 @@ private fun ScoreBlock(item: StockItem, analysis: AiAnalysis) {
             text = analysis.trendLabel + " · " + analysis.riskLevel + " · " + item.industry,
             color = AppColors.TextSub,
             fontSize = AppText.Caption,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        // 来源如实标注：llm=大模型 / rules=规则引擎兜底
+        Text(
+            text = if (analysis.source == "llm") "结论来源：大模型（qwen）" else "结论来源：规则引擎",
+            color = AppColors.Accent,
+            fontSize = AppText.Micro,
         )
     }
 }

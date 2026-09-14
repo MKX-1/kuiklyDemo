@@ -11,6 +11,9 @@ data class Config(
     val tencentKlineUrl: String,
     val tencentMklineUrl: String,
     val tencentTimeoutMs: Long,
+    val llmApiKey: String,
+    val llmModel: String,
+    val llmTimeoutMs: Long,
 ) {
     companion object {
         fun load(env: Map<String, String> = System.getenv()): Config = Config(
@@ -28,6 +31,11 @@ data class Config(
             tencentMklineUrl = env["TENCENT_MKLINE_URL"]
                 ?: "https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=",
             tencentTimeoutMs = (env["TENCENT_TIMEOUT_MS"] ?: "5000").toLongOrNull() ?: 5000L,
+            // 真 LLM（阿里云百炼，OpenAI 兼容协议）。key 只从环境变量注入，**绝不写进仓库**
+            llmApiKey = env["DASHSCOPE_API_KEY"] ?: "",
+            llmModel = env["LLM_MODEL"] ?: "qwen-turbo",
+            // LLM 天然比规则引擎慢；弹层的思考动画正好由这段真实时长驱动
+            llmTimeoutMs = (env["LLM_TIMEOUT_MS"] ?: "25000").toLongOrNull() ?: 25000L,
         )
     }
 }

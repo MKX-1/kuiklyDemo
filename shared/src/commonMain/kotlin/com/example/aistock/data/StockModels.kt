@@ -104,6 +104,8 @@ data class AiAnalysis(
     val score: Int,
     val targetPrice: Long,     // 分
     val stopLossPrice: Long,   // 分
+    // 结论来源：llm（大模型）/ rules（规则引擎）。展示层必须如实标注。
+    val source: String = "rules",
     val factors: AiFactors,
 )
 

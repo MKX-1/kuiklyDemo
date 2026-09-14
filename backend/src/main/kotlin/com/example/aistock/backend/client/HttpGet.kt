@@ -61,3 +61,33 @@ internal suspend fun httpGetGbk(url: String, timeoutMs: Long): String =
 /** 走势 JSON：UTF-8。 */
 internal suspend fun httpGetUtf8(url: String, timeoutMs: Long): String =
     httpGet(url, timeoutMs, "UTF-8")
+
+/**
+ * POST JSON（LLM 调用用）。与 [httpGet] 同一套超时/头约定，
+ * 但不做重定向跟随——LLM 网关没有重定向语义。
+ */
+internal suspend fun httpPostJson(
+    url: String,
+    bodyJson: String,
+    timeoutMs: Long,
+    headers: Map<String, String> = emptyMap(),
+): String =
+    withContext(Dispatchers.IO) {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.connectTimeout = timeoutMs.toInt()
+        conn.readTimeout = timeoutMs.toInt()
+        conn.doOutput = true
+        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        headers.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+        try {
+            conn.outputStream.use { out -> out.write(bodyJson.toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val body = stream?.bufferedReader(Charsets.UTF_8)?.readText().orEmpty()
+            if (code !in 200..299) throw IOException("HTTP $code: $body.take(200)")
+            body
+        } finally {
+            conn.disconnect()
+        }
+    }

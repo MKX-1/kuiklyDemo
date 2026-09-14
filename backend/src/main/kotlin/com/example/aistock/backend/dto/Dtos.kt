@@ -77,6 +77,9 @@ data class AiAnalysisDto(
     val targetPrice: Long,
     val stopLossPrice: Long,
     val factors: AiFactorsDto,
+    // 结论来源：llm（大模型）/ rules（规则引擎兜底）。客户端必须如实展示——
+    // 把规则引擎的输出伪装成大模型分析是我们明确不做的事。
+    val source: String = "rules",
 )
 
 @Serializable

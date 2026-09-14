@@ -243,6 +243,7 @@ private fun JSONObject.toAnalysis(): AiAnalysis? {
             industryRank = f?.optInt("industryRank") ?: -1,
             benchmarkDelta = f?.optNullableDouble("benchmarkDelta"),
         ),
+        source = optString("source").ifEmpty { "rules" },
     )
 }
 
