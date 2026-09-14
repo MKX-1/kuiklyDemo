@@ -3,19 +3,23 @@ package com.example.aistock.pages
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.aistock.components.AiSheet
 import com.example.aistock.components.MarketOverviewBar
 import com.example.aistock.components.StockCard
-import com.example.aistock.data.DataSource
-import com.example.aistock.components.AiSheet
+import com.example.aistock.components.core.PeriodSwitcher
 import com.example.aistock.data.AiAnalysis
-import com.example.aistock.data.StockItem
+import com.example.aistock.data.DataSource
 import com.example.aistock.data.StockApis
+import com.example.aistock.data.StockItem
+import com.example.aistock.data.Watchlist
+import com.example.aistock.data.WatchlistFilter
 import com.example.aistock.data.formatHms
 import com.example.aistock.theme.AppColors
 import com.example.aistock.theme.AppFont
+import com.example.aistock.theme.AppSpace
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.ComposeContainer
 import com.tencent.kuikly.compose.foundation.background
@@ -28,17 +32,22 @@ import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
 import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
+import com.tencent.kuikly.compose.foundation.layout.size
+import com.tencent.kuikly.compose.foundation.layout.width
 import com.tencent.kuikly.compose.foundation.lazy.LazyColumn
 import com.tencent.kuikly.compose.foundation.lazy.items
+import com.tencent.kuikly.compose.foundation.lazy.rememberLazyListState
 import com.tencent.kuikly.compose.foundation.shape.RoundedCornerShape
 import com.tencent.kuikly.compose.material3.Text
+import com.tencent.kuikly.compose.material3.pullToRefreshItem
+import com.tencent.kuikly.compose.material3.rememberPullToRefreshState
 import com.tencent.kuikly.compose.setContent
 import com.tencent.kuikly.compose.ui.Alignment
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.platform.LocalConfiguration
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
-import com.example.aistock.data.Watchlist
+import com.example.aistock.data.StockItem as StockItemModel
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.NetworkModule
 import com.tencent.kuikly.core.module.RouterModule
@@ -109,7 +118,7 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
     val vm: WatchlistViewModel = viewModel { WatchlistViewModel(stockApi) }
 
     // AI 抽屉状态：长按卡片拉起；分析数据在抽屉打开时才去取（真实取数时长 = 思考动画时长）
-    var sheetItem by remember { mutableStateOf<StockItem?>(null) }
+    var sheetItem by remember { mutableStateOf<StockItemModel?>(null) }
     var sheetAnalysis by remember { mutableStateOf<AiAnalysis?>(null) }
     var sheetAnalyzing by remember { mutableStateOf(false) }
     LaunchedEffect(sheetItem?.id) {
@@ -119,6 +128,13 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
         sheetAnalysis = stockApi.fetchAiAnalysis(target.code)
         sheetAnalyzing = false
     }
+
+    // 维度切换：全部 / 沪深 / 港股（纯前端过滤，不重新取数）
+    var dimension by remember { mutableStateOf(WatchlistFilter.ALL) }
+
+    // 下拉刷新：isRefreshing 由 vm.loading 驱动（取数开始→转圈，结束→收起）
+    val pullState = rememberPullToRefreshState(isRefreshing = vm.loading)
+    val listState = rememberLazyListState()
 
     // LaunchedEffect：进入页面时执行一次的副作用（这里是首次拉数据）
     LaunchedEffect(Unit) {
@@ -159,6 +175,19 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                     modifier = Modifier.padding(top = 6.dp),
                 )
             }
+            // 维度切换：全部 / 沪深 / 港股（复用周期切换条的墨块反白样式）
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PeriodSwitcher(
+                    periods = WatchlistFilter.DIMENSIONS,
+                    selected = dimension,
+                    label = { WatchlistFilter.label(it) },
+                    onSelect = { dimension = it },
+                )
+                Spacer(modifier = Modifier.weight(1f))
+            }
             // 报头 double rule：上粗下细两条横线，出版物的签名装置
             Box(
                 modifier = Modifier
@@ -197,23 +226,102 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
             }
         }
 
-        // ---- 主体列表 ----
+        // ---- 主体列表（含下拉刷新）----
         if (vm.loading && vm.stocks.isEmpty()) {
             LoadingBox()
         } else if (vm.stocks.isEmpty()) {
             EmptyBox(onRetry = { vm.load() })
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            // 维度过滤：token 前缀判断（sh/sz=沪深，hk=港股）
+            val filtered = vm.stocks.filter { WatchlistFilter.matches(dimension, Watchlist.tokenOf(it.code)) }
+            LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
+                // 下拉刷新指示器（LazyColumn 第一项）
+                pullToRefreshItem(
+                    state = pullState,
+                    onRefresh = { vm.load() },
+                    scrollState = listState,
+                ) { progress, refreshing, threshold ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val hint = when {
+                            refreshing -> "刷新中…"
+                            progress >= 1f -> "松手刷新"
+                            else -> "下拉刷新"
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(AppColors.Accent, RoundedCornerShape(2.dp)),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = hint,
+                                color = AppColors.TextSub,
+                                fontSize = AppText.Small,
+                                fontFamily = AppFont.Mono,
+                            )
+                        }
+                    }
+                }
+
                 vm.overview?.let { overview ->
-                    item { MarketOverviewBar(overview) }
+                    if (dimension == WatchlistFilter.ALL) {
+                        item { MarketOverviewBar(overview) }
+                    }
                 }
-                items(items = vm.stocks, key = { it.id }) { stock ->
-                    StockCard(
-                        stock,
-                        onClick = { onOpenDetail(stock.code) },
-                        onLongClick = { sheetItem = stock },
-                    )
+
+                if (filtered.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "该维度下暂无自选",
+                                color = AppColors.TextWeak,
+                                fontSize = AppText.Body,
+                            )
+                        }
+                    }
+                } else {
+                    // 「全部」维度：按市场分组展示（沪深 / 港股 组头）
+                    if (dimension == WatchlistFilter.ALL) {
+                        val cnList = filtered.filter { WatchlistFilter.matches(WatchlistFilter.CN, Watchlist.tokenOf(it.code)) }
+                        val hkList = filtered.filter { WatchlistFilter.matches(WatchlistFilter.HK, Watchlist.tokenOf(it.code)) }
+                        if (cnList.isNotEmpty()) {
+                            item { GroupHeader(WatchlistFilter.groupTitle(WatchlistFilter.CN, cnList.size)) }
+                            items(items = cnList, key = { it.id }) { stock ->
+                                StockCard(
+                                    stock,
+                                    onClick = { onOpenDetail(stock.code) },
+                                    onLongClick = { sheetItem = stock },
+                                )
+                            }
+                        }
+                        if (hkList.isNotEmpty()) {
+                            item { GroupHeader(WatchlistFilter.groupTitle(WatchlistFilter.HK, hkList.size)) }
+                            items(items = hkList, key = { it.id + "_hk" }) { stock ->
+                                StockCard(
+                                    stock,
+                                    onClick = { onOpenDetail(stock.code) },
+                                    onLongClick = { sheetItem = stock },
+                                )
+                            }
+                        }
+                    } else {
+                        items(items = filtered, key = { it.id }) { stock ->
+                            StockCard(
+                                stock,
+                                onClick = { onOpenDetail(stock.code) },
+                                onLongClick = { sheetItem = stock },
+                            )
+                        }
+                    }
                 }
+
                 item {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -253,6 +361,31 @@ fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit
                 }
             }
         }
+    }
+}
+
+/** 分组组头：印章方块 + 衬线组名（比 SectionHeader 轻，列表内密集使用）。 */
+@Composable
+private fun GroupHeader(title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AppSpace.ScreenEdge, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .background(AppColors.Accent),
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = title,
+            color = AppColors.TextSub,
+            fontSize = AppText.Small,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = AppFont.Serif,
+        )
     }
 }
 
