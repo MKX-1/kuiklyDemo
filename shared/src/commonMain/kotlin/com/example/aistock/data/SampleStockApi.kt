@@ -39,6 +39,15 @@ object SampleStockApi : StockApi {
     override suspend fun fetchStock(code: String): StockItem? =
         raw.find { it.code == code }?.let { enrich(it, null) }
 
+    /**
+     * 走势：离线样例**刻意不给**。
+     *
+     * 样例数据本来就是演示占位，但"占位行情"和"占位走势曲线"性质不同：
+     * 前者一眼能看出是假的（角标会写「示例数据」），后者画成曲线后**看起来就是真的**。
+     * 宁可让详情页显示「暂无走势数据」，也不给一条编出来的线。
+     */
+    override suspend fun fetchChart(token: String): ChartSeries? = null
+
     override suspend fun fetchAiAnalysis(code: String): AiAnalysis {
         val item = fetchWatchlist().stocks.firstOrNull { it.code == code }
             ?: fetchWatchlist().stocks.first()

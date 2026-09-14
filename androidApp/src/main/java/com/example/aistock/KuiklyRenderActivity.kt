@@ -56,7 +56,10 @@ class KuiklyRenderActivity : AppCompatActivity() {
         hrContainerView = findViewById(R.id.hr_container)
 
         // 4. 触发 Kuikly View 实例化并打开页面
-        contextCodeHandler.openPage(hrContainerView, pageName, createPageData())
+        //    注意把路由带过来的参数（KRRouterAdapter 塞进 Intent 的 pageData）
+        //    合并进 pageData —— 否则 openPage(name, params) 的 params 会在这里丢失，
+        //    目标页读到的永远是空参数（实测踩坑：详情页 token 一直是空）。
+        contextCodeHandler.openPage(hrContainerView, pageName, mergeIntentPageData())
     }
 
     // 5/6/7. 把宿主生命周期透传给 Kuikly 页面
@@ -90,6 +93,21 @@ class KuiklyRenderActivity : AppCompatActivity() {
             "appId" to 1,
             "sysLang" to (resources.configuration.locale.language ?: "zh"),
         )
+    }
+
+    /** 宿主默认参数 + Intent 里路由转发来的参数（后者优先）。 */
+    private fun mergeIntentPageData(): Map<String, Any> {
+        val params = createPageData().toMutableMap()
+        val extra = intent.getStringExtra(KEY_PAGE_DATA)
+        if (!extra.isNullOrBlank()) {
+            runCatching {
+                val jo = JSONObject(extra)
+                for (key in jo.keys()) {
+                    params[key] = jo.opt(key) ?: continue
+                }
+            }
+        }
+        return params
     }
 
     private fun setupAdapterManager() {

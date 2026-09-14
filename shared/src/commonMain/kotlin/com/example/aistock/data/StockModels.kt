@@ -130,4 +130,17 @@ interface StockApi {
     suspend fun fetchWatchlist(): WatchlistBundle
     suspend fun fetchAiAnalysis(code: String): AiAnalysis
     suspend fun fetchStock(code: String): StockItem?
+
+    /**
+     * 当日分时走势。
+     *
+     * 注意这条数据**只有自建后端这一级能提供**，另外两级刻意不实现：
+     *  - 直连腾讯：分时数据在那边是一段"字符串形式的数组字面量"，
+     *    客户端要解它就得把那套脏格式搬进 App，正是我们要避免的；
+     *  - 离线样例：没有真实走势可给，**更不能编一条出来** ——
+     *    图上画了线，用户就会当成当日真实走势读。
+     *
+     * 所以取不到时返回 null，由界面显示「暂无走势数据」，而不是给一条假线。
+     */
+    suspend fun fetchChart(token: String): ChartSeries?
 }

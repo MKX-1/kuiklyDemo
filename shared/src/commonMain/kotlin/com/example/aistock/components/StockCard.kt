@@ -8,6 +8,7 @@ import com.example.aistock.data.formatPctSigned
 import com.example.aistock.theme.AppColors
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.clickable
 import com.tencent.kuikly.compose.foundation.border
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
@@ -31,12 +32,15 @@ import com.tencent.kuikly.compose.ui.unit.dp
  * 这样它能被自选页、搜索结果页、详情页反复使用。
  */
 @Composable
-fun StockCard(item: StockItem) {
+fun StockCard(item: StockItem, onClick: () -> Unit = {}) {
     val changeColor = AppColors.ofChange(item.changePct)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // 点击热区放在 padding 之前：这样整行（含左右留白）都可点，
+            // 而不是只有文字卡片那一条窄带可点 —— 列表里的触摸目标越大越不容易点空。
+            .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .background(AppColors.CardBg, RoundedCornerShape(12.dp))
             .border(1.dp, AppColors.Border, RoundedCornerShape(12.dp))

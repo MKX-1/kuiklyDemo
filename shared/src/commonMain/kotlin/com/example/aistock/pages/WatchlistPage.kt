@@ -31,8 +31,11 @@ import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.platform.LocalConfiguration
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
+import com.example.aistock.data.Watchlist
 import com.tencent.kuikly.core.annotations.Page
 import com.tencent.kuikly.core.module.NetworkModule
+import com.tencent.kuikly.core.module.RouterModule
+import com.tencent.kuikly.core.nvi.serialization.json.JSONObject
 import com.tencent.kuikly.lifecycle.viewmodel.compose.viewModel
 
 /**
@@ -46,11 +49,34 @@ class WatchlistPage : ComposeContainer() {
 
     override fun willInit() {
         super.willInit()
-        // NetworkModule 依赖 Activity，属于 UI 层能力，所以在页面里取出来注入给数据层
+        // 注意：模块必须在「真正使用时」才 acquire，不能在 willInit 里急切地取——
+        // core 的内置模块（含路由）在 willInit 这个时机还没注册完成（实测踩坑：
+        // 提前取会抛 "KRRouterModule 未注册"）。所以这里只把「怎么取」包进 lambda，
+        // 跟下面 NetworkModule 的写法保持同一套惰性语义。
         setContent {
-            WatchlistScreen(network = { acquireModule(NetworkModule.MODULE_NAME) })
+            WatchlistScreen(
+                network = { acquireModule(NetworkModule.MODULE_NAME) },
+                onOpenDetail = { code ->
+                    val router = acquireModule(RouterModule.MODULE_NAME) as RouterModule
+                    openDetail(router, code)
+                },
+            )
         }
     }
+}
+
+/**
+ * 打开个股详情。
+ *
+ * 参数走 [JSONObject] 随页面一起传，而不是塞进某个全局单例：
+ * 这样详情页可以被任何入口打开（自选列表 / 将来的搜索、推送跳转），
+ * 它只依赖"进来的参数"，不依赖"谁调用了我"。
+ */
+private fun openDetail(router: RouterModule, code: String) {
+    val token = Watchlist.tokenOf(code) ?: return
+    val params = JSONObject()
+    params.put(StockDetailPage.PAGE_PARAM_TOKEN, token)
+    router.openPage(StockDetailPage.PAGE_NAME, params)
 }
 
 /**
@@ -64,7 +90,7 @@ class WatchlistPage : ComposeContainer() {
  * 好处是状态变化只有一个来源，出问题好定位。
  */
 @Composable
-fun WatchlistScreen(network: () -> NetworkModule) {
+fun WatchlistScreen(network: () -> NetworkModule, onOpenDetail: (String) -> Unit = {}) {
     // remember：跨重组缓存这个对象，别每次重画都新建一个数据源
     val stockApi = remember { StockApis.stocks(network) }
     val vm: WatchlistViewModel = viewModel { WatchlistViewModel(stockApi) }
@@ -140,7 +166,7 @@ fun WatchlistScreen(network: () -> NetworkModule) {
                     item { MarketOverviewBar(overview) }
                 }
                 items(items = vm.stocks, key = { it.id }) { stock ->
-                    StockCard(stock)
+                    StockCard(stock, onClick = { onOpenDetail(stock.code) })
                 }
                 item {
                     Box(

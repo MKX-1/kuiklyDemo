@@ -2,6 +2,7 @@ package com.example.aistock.backend.route
 
 import com.example.aistock.backend.dto.ErrorDto
 import com.example.aistock.backend.dto.HealthDto
+import com.example.aistock.backend.service.ChartService
 import com.example.aistock.backend.service.UpstreamUnavailable
 import com.example.aistock.backend.service.WatchlistService
 import io.ktor.http.HttpStatusCode
@@ -40,7 +41,16 @@ fun Application.modules(watchlist: WatchlistService) {
     }
 }
 
-fun Route.apiRoutes(watchlist: WatchlistService) {
+/**
+ * 路由装配。
+ *
+ * [chart] 给了默认实现（打真实上游），测试时注入假 client 的实例即可，
+ * 不必为了可测性在 main 里多铺一层工厂。
+ */
+fun Route.apiRoutes(
+    watchlist: WatchlistService,
+    chart: ChartService = ChartService.create(),
+) {
 
     // 探活：客户端用它来发现后端地址（多候选地址依次探测这个接口）
     get("/health") {
@@ -86,6 +96,36 @@ fun Route.apiRoutes(watchlist: WatchlistService) {
         } catch (e: UpstreamUnavailable) {
             call.respond(HttpStatusCode.BadGateway, ErrorDto("upstream_unavailable"))
         } catch (e: Throwable) {
+            call.respond(HttpStatusCode.InternalServerError, ErrorDto("internal_error"))
+        }
+    }
+
+    // 走势：GET /chart?token=sh600519&period=minute
+    get("/chart") {
+        val token = call.request.queryParameters["token"]
+        if (token == null || !token.matches(TOKEN_PATTERN)) {
+            call.respond(HttpStatusCode.BadRequest, ErrorDto("invalid_token"))
+            return@get
+        }
+        // period 现在只支持 minute；传了别的值明确报错，而不是悄悄按分时返回 ——
+        // 让调用方以为拿到的是日 K 是最坏的情况：图上会有线，但它是错的。
+        val period = call.request.queryParameters["period"] ?: ChartService.PERIOD_MINUTE
+        if (period != ChartService.PERIOD_MINUTE) {
+            call.respond(HttpStatusCode.BadRequest, ErrorDto("unsupported_period"))
+            return@get
+        }
+        try {
+            val dto = chart.fetchMinute(token)
+            if (dto == null) {
+                call.respond(HttpStatusCode.NotFound, ErrorDto("chart_not_found"))
+            } else {
+                call.respond(dto)
+            }
+        } catch (e: UpstreamUnavailable) {
+            call.respond(HttpStatusCode.BadGateway, ErrorDto("upstream_unavailable"))
+        } catch (e: Throwable) {
+            // 吞异常再回 500 等于把 bug 藏起来——必须留日志，排障时才有的看
+            call.application.environment.log.error("GET /chart internal error", e)
             call.respond(HttpStatusCode.InternalServerError, ErrorDto("internal_error"))
         }
     }

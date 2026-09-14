@@ -35,6 +35,16 @@ class RoutedStockApi(
         live.fetchStock(code)?.let { return deriveAiAnalysis(it) }
         return fallback.fetchAiAnalysis(code)
     }
+
+    /**
+     * 走势**不做多级降级**，只有后端这一级。
+     *
+     * 这是一个刻意的不对称：行情快照直连腾讯仍能得到真实数据，所以值得降级；
+     * 而走势在直连分支下要客户端自己解析上游的脏格式（违背零解析），
+     * 离线分支下**根本没有真实走势可给**。与其画一条编出来的线，
+     * 不如让页面显示「暂无走势数据」—— 图上一旦有线，用户就会当真。
+     */
+    override suspend fun fetchChart(token: String): ChartSeries? = backend?.chart(token)
 }
 
 /**

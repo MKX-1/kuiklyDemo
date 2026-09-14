@@ -106,6 +106,37 @@ class BackendApi(private val network: () -> NetworkModule) {
         val token = Watchlist.tokenOf(code) ?: return null
         return http.getJson("/analysis/$token")?.toAnalysis()
     }
+
+    /** 当日分时走势。上游那套脏格式由后端消化，这里只搬字段。 */
+    suspend fun chart(token: String): ChartSeries? {
+        val json = http.getJson("/chart?token=$token&period=minute") ?: return null
+        val points = json.optJSONArray("points").toChartPoints()
+        if (points.isEmpty()) return null
+        return ChartSeries(
+            token = json.optString("token").ifEmpty { token },
+            code = json.optString("code"),
+            name = json.optString("name"),
+            period = json.optString("period").ifEmpty { "minute" },
+            date = json.optString("date"),
+            prevClose = json.optLong("prevClose"),
+            points = points,
+        )
+    }
+}
+
+private fun JSONArray?.toChartPoints(): List<ChartPoint> {
+    if (this == null) return emptyList()
+    return (0 until length()).mapNotNull { i ->
+        val o = optJSONObject(i) ?: return@mapNotNull null
+        val price = o.optLong("price")
+        if (price <= 0L) return@mapNotNull null
+        ChartPoint(
+            time = o.optString("time"),
+            price = price,
+            avg = o.optLong("avg"),
+            volume = o.optLong("volume"),
+        )
+    }
 }
 
 private fun JSONArray?.toStocks(): List<StockItem> {
