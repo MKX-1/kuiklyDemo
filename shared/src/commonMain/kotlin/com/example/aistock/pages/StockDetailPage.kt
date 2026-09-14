@@ -3,7 +3,10 @@ package com.example.aistock.pages
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import com.example.aistock.components.TrendChart
+import com.example.aistock.components.StockChart
+import com.example.aistock.components.core.PeriodSwitcher
+import com.example.aistock.data.ChartData
+import com.example.aistock.data.ChartPeriods
 import com.example.aistock.components.core.AiSpark
 import com.example.aistock.components.core.ChevronBack
 import com.example.aistock.components.core.EmptyBox
@@ -126,7 +129,7 @@ fun StockDetailScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item { PriceBlock(item) }
-                        item { Spacer(modifier = Modifier.height(AppSpace.Sm)); ChartPanel(series = vm.chart, unavailable = vm.chartUnavailable) }
+                        item { Spacer(modifier = Modifier.height(AppSpace.Sm)); ChartPanel(data = vm.chart, unavailable = vm.chartUnavailable, loading = vm.chartLoading, period = vm.period, onPeriod = vm::switchPeriod) }
                         item { Spacer(modifier = Modifier.height(AppSpace.Sm)); QuoteGrid(item) }
                         vm.analysis?.let { an -> item { Spacer(modifier = Modifier.height(AppSpace.Sm)); AiPanel(an) } }
                         item { Disclaimer() }
@@ -218,16 +221,38 @@ private fun PriceBlock(item: StockItem) {
     }
 }
 
-/** 走势面板。数据拿不到时明确说"不可用"，而不是留白让人以为是加载中。 */
+/**
+ * 走势面板：周期切换条 + 交互图（对标 steamdt 的交互模型——
+ * 单指拖十字、双指捏合缩放、加减档按钮）。
+ * 数据拿不到时明确说"不可用"，而不是留白让人以为是加载中。
+ */
 @Composable
-private fun ChartPanel(series: ChartSeries?, unavailable: Boolean) {
+private fun ChartPanel(
+    data: ChartData?,
+    unavailable: Boolean,
+    loading: Boolean,
+    period: String,
+    onPeriod: (String) -> Unit,
+) {
     Panel(modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpace.ScreenEdge)) {
         SectionHeader(
-            title = "分时走势",
-            trailing = series?.let { "${it.date.take(4)}-${it.date.substring(4, 6)}-${it.date.substring(6, 8)}" },
+            title = "走势",
+            trailing = data?.let { d ->
+                when (d) {
+                    is ChartData.Minute -> "${d.series.date.take(4)}-${d.series.date.substring(4, 6)}-${d.series.date.substring(6, 8)}"
+                    is ChartData.Kline -> d.series.name
+                }
+            },
         )
+        PeriodSwitcher(
+            periods = ChartPeriods.ALL,
+            selected = period,
+            label = { ChartPeriods.label(it) },
+            onSelect = onPeriod,
+        )
+        Spacer(modifier = Modifier.height(AppSpace.Sm))
         when {
-            series != null && series.points.isNotEmpty() -> TrendChart(series)
+            data != null -> StockChart(data = data, modifier = Modifier.fillMaxWidth())
             unavailable -> Box(
                 modifier = Modifier.fillMaxWidth().height(150.dp),
                 contentAlignment = Alignment.Center,
@@ -242,7 +267,15 @@ private fun ChartPanel(series: ChartSeries?, unavailable: Boolean) {
                     )
                 }
             }
-            else -> LoadingBox(text = "正在拉取分时…")
+            else -> LoadingBox(text = "正在拉取走势…")
+        }
+        if (loading && data != null) {
+            Text(
+                text = "切换周期中…",
+                color = AppColors.TextWeak,
+                fontSize = AppText.Micro,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

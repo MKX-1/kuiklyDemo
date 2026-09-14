@@ -100,26 +100,29 @@ fun Route.apiRoutes(
         }
     }
 
-    // 走势：GET /chart?token=sh600519&period=minute
+    // 走势：GET /chart?token=sh600519&period=minute|m60|day|week|month
     get("/chart") {
         val token = call.request.queryParameters["token"]
         if (token == null || !token.matches(TOKEN_PATTERN)) {
             call.respond(HttpStatusCode.BadRequest, ErrorDto("invalid_token"))
             return@get
         }
-        // period 现在只支持 minute；传了别的值明确报错，而不是悄悄按分时返回 ——
+        // period 不在支持集里明确报错，而不是悄悄按分时返回 ——
         // 让调用方以为拿到的是日 K 是最坏的情况：图上会有线，但它是错的。
         val period = call.request.queryParameters["period"] ?: ChartService.PERIOD_MINUTE
-        if (period != ChartService.PERIOD_MINUTE) {
-            call.respond(HttpStatusCode.BadRequest, ErrorDto("unsupported_period"))
-            return@get
-        }
         try {
-            val dto = chart.fetchMinute(token)
-            if (dto == null) {
-                call.respond(HttpStatusCode.NotFound, ErrorDto("chart_not_found"))
-            } else {
-                call.respond(dto)
+            when (period) {
+                ChartService.PERIOD_MINUTE -> {
+                    val dto = chart.fetchMinute(token)
+                    if (dto == null) call.respond(HttpStatusCode.NotFound, ErrorDto("chart_not_found"))
+                    else call.respond(dto)
+                }
+                in ChartService.SUPPORTED_KLINE_PERIODS -> {
+                    val dto = chart.fetchKline(token, period)
+                    if (dto == null) call.respond(HttpStatusCode.NotFound, ErrorDto("chart_not_found"))
+                    else call.respond(dto)
+                }
+                else -> call.respond(HttpStatusCode.BadRequest, ErrorDto("unsupported_period"))
             }
         } catch (e: UpstreamUnavailable) {
             call.respond(HttpStatusCode.BadGateway, ErrorDto("upstream_unavailable"))

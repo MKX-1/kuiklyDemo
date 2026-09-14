@@ -46,7 +46,7 @@ object SampleStockApi : StockApi {
      * 前者一眼能看出是假的（角标会写「示例数据」），后者画成曲线后**看起来就是真的**。
      * 宁可让详情页显示「暂无走势数据」，也不给一条编出来的线。
      */
-    override suspend fun fetchChart(token: String): ChartSeries? = null
+    override suspend fun fetchChart(token: String, period: String): ChartData? = null
 
     override suspend fun fetchAiAnalysis(code: String): AiAnalysis {
         val item = fetchWatchlist().stocks.firstOrNull { it.code == code }

@@ -107,20 +107,40 @@ class BackendApi(private val network: () -> NetworkModule) {
         return http.getJson("/analysis/$token")?.toAnalysis()
     }
 
-    /** 当日分时走势。上游那套脏格式由后端消化，这里只搬字段。 */
-    suspend fun chart(token: String): ChartSeries? {
-        val json = http.getJson("/chart?token=$token&period=minute") ?: return null
-        val points = json.optJSONArray("points").toChartPoints()
-        if (points.isEmpty()) return null
-        return ChartSeries(
-            token = json.optString("token").ifEmpty { token },
-            code = json.optString("code"),
-            name = json.optString("name"),
-            period = json.optString("period").ifEmpty { "minute" },
-            date = json.optString("date"),
-            prevClose = json.optLong("prevClose"),
-            points = points,
-        )
+    /** 走势（分时 / K 线）。上游那套脏格式由后端消化，这里只搬字段、按 period 分派。 */
+    suspend fun chart(token: String, period: String): ChartData? {
+        val json = http.getJson("/chart?token=$token&period=$period") ?: return null
+        return when (period) {
+            ChartPeriods.MINUTE -> {
+                val points = json.optJSONArray("points").toChartPoints()
+                if (points.isEmpty()) return null
+                ChartData.Minute(
+                    ChartSeries(
+                        token = json.optString("token").ifEmpty { token },
+                        code = json.optString("code"),
+                        name = json.optString("name"),
+                        period = json.optString("period").ifEmpty { ChartPeriods.MINUTE },
+                        date = json.optString("date"),
+                        prevClose = json.optLong("prevClose"),
+                        points = points,
+                    ),
+                )
+            }
+            else -> {
+                val candles = json.optJSONArray("candles").toCandles()
+                if (candles.isEmpty()) return null
+                ChartData.Kline(
+                    KlineSeries(
+                        token = json.optString("token").ifEmpty { token },
+                        code = json.optString("code"),
+                        name = json.optString("name"),
+                        period = json.optString("period").ifEmpty { period },
+                        prevClose = json.optLong("prevClose"),
+                        candles = candles,
+                    ),
+                )
+            }
+        }
     }
 }
 
@@ -134,6 +154,24 @@ private fun JSONArray?.toChartPoints(): List<ChartPoint> {
             time = o.optString("time"),
             price = price,
             avg = o.optLong("avg"),
+            volume = o.optLong("volume"),
+        )
+    }
+}
+
+private fun JSONArray?.toCandles(): List<Candle> {
+    if (this == null) return emptyList()
+    return (0 until length()).mapNotNull { i ->
+        val o = optJSONObject(i) ?: return@mapNotNull null
+        val open = o.optLong("open")
+        val close = o.optLong("close")
+        if (open <= 0L || close <= 0L) return@mapNotNull null
+        Candle(
+            time = o.optString("time"),
+            open = open,
+            close = close,
+            high = o.optLong("high"),
+            low = o.optLong("low"),
             volume = o.optLong("volume"),
         )
     }

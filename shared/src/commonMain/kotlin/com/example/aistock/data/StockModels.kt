@@ -142,5 +142,6 @@ interface StockApi {
      *
      * 所以取不到时返回 null，由界面显示「暂无走势数据」，而不是给一条假线。
      */
-    suspend fun fetchChart(token: String): ChartSeries?
+    /** 走势：[period] ∈ ChartPeriods.ALL。分时返回 Minute，K 线返回 Kline。 */
+    suspend fun fetchChart(token: String, period: String): ChartData?
 }

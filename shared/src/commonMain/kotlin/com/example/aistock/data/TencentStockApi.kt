@@ -200,7 +200,7 @@ class TencentStockApi(private val network: () -> NetworkModule) : StockApi {
      * 腾讯的分时数据是一段"字符串形式的数组字面量"，客户端解析它等于把那套脏格式搬进 App，
      * 与「客户端零解析」的原则冲突。所以直连分支下详情页不显示走势图（而不是画一条假的）。
      */
-    override suspend fun fetchChart(token: String): ChartSeries? = null
+    override suspend fun fetchChart(token: String, period: String): ChartData? = null
 
     /**
      * 取原始文本。

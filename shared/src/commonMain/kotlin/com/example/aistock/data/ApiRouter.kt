@@ -44,7 +44,11 @@ class RoutedStockApi(
      * 离线分支下**根本没有真实走势可给**。与其画一条编出来的线，
      * 不如让页面显示「暂无走势数据」—— 图上一旦有线，用户就会当真。
      */
-    override suspend fun fetchChart(token: String): ChartSeries? = backend?.chart(token)
+    override suspend fun fetchChart(token: String, period: String): ChartData? {
+        // 走势只有后端链提供（直连腾讯解不了那套 K 线脏格式，样例源也不画假图）；
+        // 后端不可用就返回 null，详情页会明确显示「走势不可用」而不是画错数据。
+        return backend?.chart(token, period)
+    }
 }
 
 /**

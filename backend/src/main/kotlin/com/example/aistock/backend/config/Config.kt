@@ -8,6 +8,8 @@ data class Config(
     val port: Int,
     val tencentQuoteUrl: String,
     val tencentMinuteUrl: String,
+    val tencentKlineUrl: String,
+    val tencentMklineUrl: String,
     val tencentTimeoutMs: Long,
 ) {
     companion object {
@@ -18,7 +20,13 @@ data class Config(
             // 那套接口现在返回的是过期快照（实测给到 2021 年），画出来就是陈年行情。
             // web.ifzq.gtimg.cn 这套 JSON 接口才是当日的。
             tencentMinuteUrl = env["TENCENT_MINUTE_URL"]
-                ?: "http://web.ifzq.gtimg.cn/appstock/app/minute/query?code=",
+                ?: "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=",
+            // 日/周/月 K（前复权）：param={token},{period},,,{数量},qfq
+            tencentKlineUrl = env["TENCENT_KLINE_URL"]
+                ?: "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=",
+            // 分钟级 K 线（m60 等）：param={token},m60,,{数量}
+            tencentMklineUrl = env["TENCENT_MKLINE_URL"]
+                ?: "https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=",
             tencentTimeoutMs = (env["TENCENT_TIMEOUT_MS"] ?: "5000").toLongOrNull() ?: 5000L,
         )
     }
