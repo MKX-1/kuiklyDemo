@@ -14,15 +14,15 @@ import com.example.aistock.theme.AppFont
 import com.example.aistock.theme.AppText
 import com.tencent.kuikly.compose.foundation.Canvas
 import com.tencent.kuikly.compose.foundation.clickable
-import com.tencent.kuikly.compose.foundation.gestures.detectTransformGestures
+import com.tencent.kuikly.compose.foundation.gestures.detectHorizontalDragGestures
+import com.tencent.kuikly.compose.foundation.gestures.detectTapGestures
 import com.tencent.kuikly.compose.foundation.layout.Arrangement
 import com.tencent.kuikly.compose.foundation.layout.Box
 import com.tencent.kuikly.compose.foundation.layout.Column
 import com.tencent.kuikly.compose.foundation.layout.Row
 import com.tencent.kuikly.compose.foundation.layout.Spacer
-import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.fillMaxSize
-import com.tencent.kuikly.compose.foundation.background
+import com.tencent.kuikly.compose.foundation.layout.fillMaxWidth
 import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.material3.Text
@@ -39,16 +39,14 @@ import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
 
 /**
- * 交互式行情图 —— 对标 steamdt 的 CS2 价格走势组件的交互模型：
+ * 交互式行情图 —— 交互模型对标 steamdt 的 CS2 价格走势组件：
  *
- *  - **单指横拖**：十字光标吸附到最近的 K 线/分时点，顶部读出行显示该时刻的 OHLC；
- *  - **双指捏合**：以捏合中心为锚点缩放时间跨度（可见根数变，Y 轴按窗口自适应）；
- *  - **＋/－ 按钮**：与双指捏合等价（单指设备与自动化测试也能缩放）；
- *  - **单指拖不平移窗口**：十字与平移两个语义混在一个手指上会打架，
- *    steamdt 的取舍是「单指 = 十字，双指 = 缩放」，这里保持一致。
+ *  - **点击**：选中/取消十字光标，吸附到最近的 K 线/分时点，读出行显示该时刻 OHLC；
+ *  - **横向拖动**：十字跟随移动；K 线拖到窗口边缘时窗口跟随平移（能翻看更早/更新的数据）；
+ *  - **跨度 ＋/－ 按钮**：缩放时间跨度（可见根数变，Y 轴按窗口自适应）；
+ *    捏合手势在本 fork 的 LazyColumn 组合下收不到事件（实测），故不提供。
  *
- * 性能关键点：**只画可见窗口**（[ChartWindow]），300 根日 K 缩到 10 根时
- * 仍然只画 10 根，绘制成本不随数据量涨。
+ * 性能关键点：**只画可见窗口**（[ChartWindow]），绘制成本不随数据量涨。
  */
 @Composable
 fun StockChart(
@@ -61,12 +59,14 @@ fun StockChart(
     }
 }
 
-// ================================================================ 分时
+// ================================================================
+// 分时（点序列）
 
 @Composable
 private fun MinuteChart(data: ChartData.Minute, modifier: Modifier) {
     val points = data.series.points
     var crosshair by remember(data) { mutableStateOf<Int?>(null) }
+    val n = points.size
 
     Column(modifier = modifier) {
         ReadoutRow {
@@ -87,26 +87,29 @@ private fun MinuteChart(data: ChartData.Minute, modifier: Modifier) {
             }
         }
 
-        val n = points.size
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(260.dp)
+                // 手势：点击选中/取消十字，横向拖动移动十字
                 .pointerInput(data.series) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        if (n < 2) return@detectTransformGestures
-                        val slot = size.width / n
-                        if (zoom == 1f && pan.x != 0f) {
-                            val cur = crosshair ?: n / 2
-                            crosshair = (cur + (pan.x / slot).toInt()).coerceIn(0, n - 1)
-                        }
+                    detectTapGestures { offset ->
+                        if (n < 2) return@detectTapGestures
+                        val i = ((offset.x / size.width) * n).toInt().coerceIn(0, n - 1)
+                        crosshair = if (crosshair == i) null else i
+                    }
+                }
+                .pointerInput(data.series) {
+                    detectHorizontalDragGestures { change, _ ->
+                        if (n < 2) return@detectHorizontalDragGestures
+                        crosshair = ((change.position.x / size.width) * n).toInt().coerceIn(0, n - 1)
                     }
                 },
         ) {
             if (n < 2) return@Canvas
             val w = size.width
             val h = size.height
-            val volH = h * 0.18f                       // 成交量条带高度
+            val volH = h * 0.18f
             val priceH = h - volH - 4.dp.toPx()
             val prev = data.series.prevClose
             // Y 轴以昨收为中心对称
@@ -149,7 +152,8 @@ private fun MinuteChart(data: ChartData.Minute, modifier: Modifier) {
     }
 }
 
-// ================================================================ K 线
+// ================================================================
+// K 线（蜡烛序列）
 
 @Composable
 private fun KlineChart(data: ChartData.Kline, modifier: Modifier) {
@@ -162,6 +166,7 @@ private fun KlineChart(data: ChartData.Kline, modifier: Modifier) {
     val bounds = ChartPeriods.spanBounds(data.series.period, total)
 
     Column(modifier = modifier) {
+        // 读出行：十字处 OHLC；无十字时显示窗口区间与最新收盘
         ReadoutRow {
             val i = crosshair
             if (i != null) {
@@ -186,89 +191,84 @@ private fun KlineChart(data: ChartData.Kline, modifier: Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
-                .background(AppColors.PanelHi),
+                .height(280.dp),
         ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(data.series) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        if (total < 2) return@detectTransformGestures
-                        if (zoom != 1f) {
-                            // 双指：以十字（或窗口中心）为锚缩放
-                            val anchor = crosshair ?: (window.start + window.count / 2)
-                            val anchorFrac = ((anchor - window.start).toFloat() / window.count).coerceIn(0f, 1f)
-                            window = window.zoom(zoom, anchorFrac, total, bounds.first, bounds.last)
-                            crosshair = (window.start + (anchorFrac * window.count).toInt())
-                                .coerceIn(window.start, window.endExclusive - 1)
-                        } else if (pan.x != 0f) {
-                            // 单指：拖十字（不平移，语义见类注释）
-                            val slot = size.width / window.count
-                            val cur = crosshair ?: (window.start + window.count / 2)
-                            crosshair = (cur + (pan.x / slot).toInt())
-                                .coerceIn(window.start, window.endExclusive - 1)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // 手势：点击选中/取消十字；横向拖动移动十字（拖到边缘时窗口跟随平移）
+                    .pointerInput(data.series) {
+                        detectTapGestures { offset ->
+                            if (total < 2) return@detectTapGestures
+                            val vi = ((offset.x / size.width) * window.count).toInt().coerceIn(0, window.count - 1)
+                            val tapped = window.start + vi
+                            crosshair = if (crosshair == tapped) null else tapped
                         }
                     }
-                },
-        ) {
-            if (total < 2) return@Canvas
-            try {
-            val w = size.width
-            val h = size.height
-            val volH = h * 0.18f
-            val priceH = h - volH - 4.dp.toPx()
+                    .pointerInput(data.series) {
+                        detectHorizontalDragGestures { change, _ ->
+                            if (total < 2) return@detectHorizontalDragGestures
+                            val vi = ((change.position.x / size.width) * window.count).toInt().coerceIn(0, window.count - 1)
+                            if (vi == 0 && window.start > 0) {
+                                window = window.pan(-1, total)
+                            } else if (vi == window.count - 1 && window.endExclusive < total) {
+                                window = window.pan(1, total)
+                            }
+                            crosshair = (window.start + vi).coerceIn(window.start, window.endExclusive - 1)
+                        }
+                    },
+            ) {
+                if (total < 2) return@Canvas
+                try {
+                    val w = size.width
+                    val h = size.height
+                    val volH = h * 0.18f
+                    val priceH = h - volH - 4.dp.toPx()
 
-            val visible = candles.subList(window.start, window.endExclusive)
-            val hi = visible.maxOf { it.high }
-            val lo = visible.minOf { it.low }
-            val range = (hi - lo).coerceAtLeast(1L)
-            val pad = priceH * 0.06f
-            val yOf = { price: Long ->
-                pad + (1f - (price - lo).toFloat() / range) * (priceH - 2 * pad)
-            }
+                    val visible = candles.subList(window.start, window.endExclusive)
+                    val hi = visible.maxOf { it.high }
+                    val lo = visible.minOf { it.low }
+                    val range = (hi - lo).coerceAtLeast(1L)
+                    val pad = priceH * 0.06f
+                    val yOf = { price: Long ->
+                        pad + (1f - (price - lo).toFloat() / range) * (priceH - 2 * pad)
+                    }
 
-            drawGrid(w, h, yOf((hi + lo) / 2L))
+                    drawGrid(w, h, yOf((hi + lo) / 2L))
 
-            val slot = w / window.count
-            val bodyW = (slot * 0.62f).coerceAtLeast(1f)
-            val maxVol = visible.maxOf { it.volume }.coerceAtLeast(1L)
+                    val slot = w / window.count
+                    val bodyW = (slot * 0.62f).coerceAtLeast(1f)
+                    val maxVol = visible.maxOf { it.volume }.coerceAtLeast(1L)
 
-            visible.forEachIndexed { vi, c ->
-                val cx = xFor(vi, window.count, w)   // 注意用窗口内下标：全局下标会让蜡烛画到画布外
-                val color = if (c.bullish) AppColors.Up else AppColors.Down
-                drawLine(color, Offset(cx, yOf(c.high)), Offset(cx, yOf(c.low)), 1f)
-                val top = yOf(maxOf(c.open, c.close))
-                val bh = (yOf(minOf(c.open, c.close)) - top).coerceAtLeast(1f)
-                drawRect(color = color, topLeft = Offset(cx - bodyW / 2, top), size = Size(bodyW, bh))
-                val volH2 = (c.volume.toFloat() / maxVol) * volH
-                drawRect(
-                    color = color.copy(alpha = 0.55f),
-                    topLeft = Offset(cx - bodyW / 2, h - volH2),
-                    size = Size(bodyW, volH2),
-                )
-            }
+                    visible.forEachIndexed { vi, c ->
+                        // 注意 x 用窗口内下标：全局下标会把蜡烛画到画布外
+                        val cx = xFor(vi, window.count, w)
+                        val color = if (c.bullish) AppColors.Up else AppColors.Down
+                        drawLine(color, Offset(cx, yOf(c.high)), Offset(cx, yOf(c.low)), 1f)
+                        val top = yOf(maxOf(c.open, c.close))
+                        val bh = (yOf(minOf(c.open, c.close)) - top).coerceAtLeast(1f)
+                        drawRect(color = color, topLeft = Offset(cx - bodyW / 2, top), size = Size(bodyW, bh))
+                        val volH2 = (c.volume.toFloat() / maxVol) * volH
+                        drawRect(
+                            color = color.copy(alpha = 0.55f),
+                            topLeft = Offset(cx - bodyW / 2, h - volH2),
+                            size = Size(bodyW, volH2),
+                        )
+                    }
 
-            crosshair?.let { i ->
-                candles.getOrNull(i)?.let { c ->
-                    drawCrosshair(xFor(i - window.start, window.count, w), yOf(c.close), w, priceH)
+                    crosshair?.let { i ->
+                        candles.getOrNull(i)?.let { c ->
+                            drawCrosshair(xFor(i - window.start, window.count, w), yOf(c.close), w, priceH)
+                        }
+                    }
+                } catch (e: Throwable) {
+                    // 防御：上游数据形态变化时图表静默失败比整页崩溃好——但必须留日志
+                    println("[StockChart] kline onDraw: " + e.javaClass.name + ": " + e.message)
                 }
             }
-
-            } catch (e: Throwable) {
-                println("[StockChart] kline onDraw 异常: " + e.javaClass.name + ": " + e.message)
-                e.stackTraceToString().split('\n').take(15).forEach { println("[StockChart] " + it) }
-            }
         }
-        TimeLabels(
-            listOf(
-                candles.getOrNull(window.start)?.time ?: "",
-                candles.getOrNull(window.start + window.count / 2)?.time ?: "",
-                candles.getOrNull(window.endExclusive - 1)?.time ?: "",
-            ),
-        )
 
-        // 缩放控件：＋/－ 档位（与双指捏合等价）+ 当前跨度回显
+        // 跨度控件：紧跟成交量条带正下方（＋/－ 与双指捏合等价）+ 当前跨度回显
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -308,11 +308,20 @@ private fun KlineChart(data: ChartData.Kline, modifier: Modifier) {
                     .padding(horizontal = 12.dp, vertical = 4.dp),
             )
         }
+
+        // 时间轴：窗口首 / 中 / 尾（图例区最底部）
+        TimeLabels(
+            listOf(
+                candles.getOrNull(window.start)?.time ?: "",
+                candles.getOrNull(window.start + window.count / 2)?.time ?: "",
+                candles.getOrNull(window.endExclusive - 1)?.time ?: "",
+            ),
+        )
     }
 }
-}
 
-// ================================================================ 绘制原语
+// ================================================================
+// 绘制原语
 
 private const val ZOOM_STEP = 1.35f
 
@@ -355,7 +364,8 @@ private fun DrawScope.drawCrosshair(x: Float, y: Float, w: Float, h: Float) {
     drawCircle(AppColors.Panel, radius = 1.6f, center = Offset(x, y))
 }
 
-// ================================================================ 小件
+// ================================================================
+// 小件
 
 @Composable
 private fun ReadoutRow(content: @Composable () -> Unit) {
