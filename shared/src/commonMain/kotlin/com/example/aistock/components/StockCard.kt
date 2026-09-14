@@ -1,6 +1,8 @@
 package com.example.aistock.components
 
 import androidx.compose.runtime.Composable
+import com.example.aistock.components.core.AiBadge
+import com.example.aistock.components.core.Badge
 import com.example.aistock.components.core.HairLine
 import com.example.aistock.data.StockItem
 import com.example.aistock.data.formatDouble2
@@ -25,6 +27,7 @@ import com.tencent.kuikly.compose.foundation.layout.height
 import com.tencent.kuikly.compose.foundation.layout.padding
 import com.tencent.kuikly.compose.material3.Text
 import com.tencent.kuikly.compose.ui.Alignment
+import com.tencent.kuikly.compose.ui.graphics.Color
 import com.tencent.kuikly.compose.ui.Modifier
 import com.tencent.kuikly.compose.ui.text.font.FontWeight
 import com.tencent.kuikly.compose.ui.unit.dp
@@ -126,15 +129,7 @@ fun StockCard(item: StockItem, onClick: () -> Unit = {}, onLongClick: () -> Unit
                     .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "AI",
-                    color = AppColors.Panel,
-                    fontSize = AppText.Tiny,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .background(AppColors.Accent, AppShape.Badge)
-                        .padding(horizontal = 5.dp, vertical = 1.dp),
-                )
+                AiBadge()
                 Text(
                     text = "  ${item.aiProfile.action} · ${item.aiProfile.signal} · ${item.aiProfile.score}分",
                     color = AppColors.Accent,
@@ -164,13 +159,12 @@ private fun StatCell(label: String, value: String, modifier: Modifier = Modifier
 
 @Composable
 private fun TagChip(text: String) {
-    Text(
-        text = text,
-        color = AppColors.TextSub,
-        fontSize = AppText.Tiny,
-        modifier = Modifier
-            .padding(end = 6.dp)
-            .border(1.dp, AppColors.Line, AppShape.Badge)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
+    Box(modifier = Modifier.padding(end = 6.dp)) {
+        Badge(
+            text = text,
+            container = Color.Transparent,
+            content = AppColors.TextSub,
+            bordered = true,
+        )
+    }
 }

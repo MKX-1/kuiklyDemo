@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.aistock.components.AiSheet
+import com.example.aistock.components.core.Badge
 import com.example.aistock.components.MarketOverviewBar
 import com.example.aistock.components.StockCard
 import com.example.aistock.components.core.PeriodSwitcher
@@ -397,14 +398,12 @@ private fun SourceBadge(source: DataSource, fetchedAt: Long) {
         DataSource.CACHE -> "非实时 ${formatHms(fetchedAt)}" to AppColors.Warning
         DataSource.OFFLINE -> "示例数据" to AppColors.Warning
     }
-    Text(
+    Badge(
         text = label,
-        color = color,
-        fontSize = AppText.Tiny,
+        container = AppColors.CardBg,
+        content = color,
+        height = 20.dp,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier
-            .background(AppColors.CardBg, RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }
 

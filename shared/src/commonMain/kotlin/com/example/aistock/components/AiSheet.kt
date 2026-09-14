@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import com.example.aistock.components.core.AiBadge
 import com.example.aistock.components.core.FactorBar
 import com.example.aistock.components.core.HairLine
 import com.example.aistock.data.AiAnalysis
@@ -98,15 +99,7 @@ fun AiSheet(
 
         // 标题行：AI 印章方块 + 衬线标题 + 评分
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "AI",
-                color = AppColors.Panel,
-                fontSize = AppText.Tiny,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .background(AppColors.Accent, AppShape.Badge)
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            )
+            AiBadge()
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "AI 分析 · ${item.name}",
