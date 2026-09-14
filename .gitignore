@@ -1,0 +1,22 @@
+# ---- 构建产物 ----
+build/
+.gradle/
+.kotlin/
+out/
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+
+# ---- 本机相关（每台机器不同，不该进仓库）----
+local.properties
+
+# ---- 本地留底 / 参考副本（体积大或只读，仅本地用）----
+.backup/
+.refs/
+.logs/
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db

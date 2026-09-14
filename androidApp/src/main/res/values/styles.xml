@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <!-- 键盘弹出时不改变 Acitivity 尺寸，由 Kuikly 自己处理键盘避让 -->
+        <item name="android:windowSoftInputMode">stateUnspecified|adjustNothing</item>
+    </style>
+</resources>
